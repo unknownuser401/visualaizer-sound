@@ -1,1 +1,1 @@
-Sound viewer captured by microphone, using python libraries such as pyaudio and pygames
+Sound viewer captured by microphone, using python libraries such as pyaudio and pygames.
