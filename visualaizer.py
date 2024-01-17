@@ -16,29 +16,26 @@ chunk_size = 1024
 # Configuración del visualizador
 fps = 30
 clock = pygame.time.Clock()
-bar_width = 5
-bar_spacing = 2
-num_bars = width // (bar_width + bar_spacing)
-bars_left = [0] * num_bars
-bars_right = [0] * num_bars
+line_color = (255, 255, 255)
+max_amplitude = 32767  # Valor máximo para normalización
+
+# Definir variables para almacenar la forma de onda
+x_values = np.linspace(0, width, chunk_size, endpoint=False)
+y_values = np.zeros_like(x_values)
 
 def audio_callback(in_data, frame_count, time_info, status):
     # Obtener amplitud del audio
     data = np.frombuffer(in_data, dtype=np.int16)
-    left_data = data[0::2]
-    right_data = data[1::2]
     
-    spectrum_left = np.abs(np.fft.fft(left_data))
-    spectrum_right = np.abs(np.fft.fft(right_data))
-    spectrum_left = spectrum_left[:num_bars]
-    spectrum_right = spectrum_right[:num_bars]
-
     # Normalizar y ajustar la escala
-    spectrum_left /= spectrum_left.max()
-    spectrum_right /= spectrum_right.max()
-    
-    bars_left[:] = spectrum_left * height
-    bars_right[:] = spectrum_right * height
+    normalized_data = data / max_amplitude
+
+    # Ajustar las dimensiones de y_values
+    if len(normalized_data) < len(y_values):
+        y_values[:len(normalized_data)] = normalized_data * (height / 2) + height / 2
+        y_values[len(normalized_data):] = 0
+    else:
+        y_values[:] = normalized_data[:len(y_values)] * (height / 2) + height / 2
 
     return (in_data, pyaudio.paContinue)
 
@@ -63,12 +60,9 @@ while stream.is_active():
             p.terminate()
             raise SystemExit
 
-    # Dibujar el visualizador
+    # Dibujar la forma de onda
     window.fill((0, 0, 0))
-    for i in range(num_bars):
-        x = i * (bar_width + bar_spacing)
-        pygame.draw.rect(window, (255, 0, 0), (x, height - bars_left[i], bar_width, bars_left[i]))
-        pygame.draw.rect(window, (0, 0, 255), (x, height - bars_right[i], bar_width, bars_right[i]))
+    pygame.draw.lines(window, line_color, False, list(zip(x_values, y_values)), 2)
 
     pygame.display.flip()
     clock.tick(fps)
